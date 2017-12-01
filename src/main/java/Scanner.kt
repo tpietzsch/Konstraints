@@ -19,13 +19,13 @@ enum class TokenType {
 	EOF
 }
 
-data class Token(val type: TokenType, val lexeme: String, val line: Int) {
-	override fun toString(): String =  String() + type + " " + lexeme
+data class Token(val type : TokenType, val lexeme : String, val from : Int, val to : Int) {
+	override fun toString() : String = String() + type + " " + lexeme
 }
 
-fun scan( source : String ) : List<Token> = Scanner(source).scanTokens()
+fun scan(source : String) : List<Token> = Scanner(source).scanTokens()
 
-private class Scanner( val source : String ) {
+private class Scanner(val source : String) {
 	private val tokens = ArrayList<Token>()
 	private var start = 0
 	private var current = 0
@@ -38,27 +38,26 @@ private class Scanner( val source : String ) {
 			scanToken();
 		}
 
-		tokens.add(Token(EOF, "", line));
+		tokens.add(Token(EOF, "", source.length, source.length));
 		return tokens;
 	}
 
 	private fun scanToken() {
 		var c = advance();
 
-		when ( c ) {
+		when (c) {
 			'(' -> addToken(LEFT_PAREN)
 			')' -> addToken(RIGHT_PAREN)
 			'!' -> addToken(BANG)
 			'&' -> addToken(AND)
 			'|' -> addToken(OR)
-			' ', '\r', '\t' -> {}
-
-//			'\n' -> line++
+			' ', '\r', '\t' -> {
+			}
 
 			else -> {
 				when {
 					isAlpha(c) -> identifier()
-					else -> error(line, "Unexpected character.")
+					else -> error( (current-1), "Unexpected character.")
 				}
 			}
 		}
@@ -70,9 +69,9 @@ private class Scanner( val source : String ) {
 
 	private fun peek() = if (isAtEnd()) '\u0000' else source[current]
 
-	private fun addToken(type: TokenType) {
+	private fun addToken(type : TokenType) {
 		val text = source.substring(start, current)
-		tokens.add(Token(type, text, line))
+		tokens.add(Token(type, text, start, current))
 	}
 
 	private fun identifier() {
@@ -80,9 +79,9 @@ private class Scanner( val source : String ) {
 		addToken(IDENTIFIER)
 	}
 
-	private fun isDigit(c: Char) : Boolean = c in '0' .. '9'
+	private fun isDigit(c : Char) : Boolean = c in '0' .. '9'
 
-	private fun isAlpha(c: Char) : Boolean = c in 'a' .. 'z' || c in 'A' .. 'Z' || c == '_'
+	private fun isAlpha(c : Char) : Boolean = c in 'a' .. 'z' || c in 'A' .. 'Z' || c == '_'
 
-	private fun isAlphaNumeric(c: Char) = isAlpha(c) || isDigit(c)
+	private fun isAlphaNumeric(c : Char) = isAlpha(c) || isDigit(c)
 }

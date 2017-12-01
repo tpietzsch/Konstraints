@@ -1,9 +1,3 @@
-import kotlin.collections.Grouping
-import java.time.temporal.TemporalAdjusters.previous
-import sun.tools.jstat.Literal
-import javax.print.DocFlavor.STRING
-import org.apache.log4j.NDC.peek
-
 fun main(args : Array<String>) {
 	val source = args.joinToString(" ")
 	run(source)
@@ -14,36 +8,57 @@ fun main(args : Array<String>) {
 	}
 }
 
-private fun run(source: String) {
+private fun run(source : String) {
+	thesource = source
+	hadError = false;
+
 	val tokens = scan(source)
+	if (hadError)
+		return
 
-	// For now, just print the tokens.
-	for (token in tokens) {
-		println(token)
-	}
+	val expr = parse(tokens)
+	if (hadError)
+		return
 
-	println()
+	val cnf = expr.toCNF()
 
-	println(parse(tokens))
+	println(expr.toString())
+	println(cnf.prettyPrint())
+	println(cnfConstraints(cnf))
 }
 
-fun error(line : Int, message : String) {
-	report(line, "", message)
+// TODO: remove clauses that are supersets of other clauses
+
+fun <T> cnfConstraints(cnf : Conjunction<T>) = cnf.map { clauseConstraints(it) }.joinToString("\n")
+
+fun <T> clauseConstraints(clause : Disjunction<T>) : String {
+	val (positive, negative) = clause.partition { it is Atom }
+	val s1 = positive.joinToString(" + " );
+	val s2 = negative.joinToString(" - ", transform = {e -> (e as NotExpr<T>).a.toString() } )
+	return s1 + (if ( negative.isEmpty() ) "" else " - " + s2 ) + " ≥ ${1 - negative.size}"
+}
+
+var thesource : String = ""
+
+fun error(pos : Int, message : String, where : String = "", length : Int = 1) {
+	println("Error$where: $message")
+
+	println(thesource.replace("\t", " "))
+	val sb = StringBuilder()
+	repeat(pos, { sb.append(" ") })
+	repeat(length, { sb.append("^") })
+	println(sb)
+
+	hadError = true
 }
 
 fun error(token : Token, message : String) {
 	if (token.type === TokenType.EOF) {
-		report(token.line, " at end", message)
+		error(token.from, message, " at end")
 	} else {
-		report(token.line, " at '" + token.lexeme + "'", message)
+		error(token.from, message, " at '${token.lexeme}'", token.to - token.from)
 	}
 }
 
 private var hadError = false
-
-private fun report(line : Int, where : String, message : String) {
-	System.err.println(
-			"[line $line] Error$where: $message")
-	hadError = true
-}
 

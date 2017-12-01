@@ -1,14 +1,6 @@
 // == Boolean expressions ==
 
 sealed class BooleanExpr<T>() {
-	override fun toString() : String =
-			when (this) {
-				is Atom -> this.a.toString()
-				is NotExpr -> "¬" + this.a
-				is AndExpr -> "(" + this.a + "\u2227" + this.b + ")"
-				is OrExpr -> "(" + this.a + "\u2228" + this.b + ")"
-			}
-
 	operator fun unaryMinus() = NotExpr<T>(this)
 
 	infix fun and(b : BooleanExpr<T>) = AndExpr<T>(this, b)
@@ -16,19 +8,27 @@ sealed class BooleanExpr<T>() {
 	infix fun or(b : BooleanExpr<T>) = OrExpr<T>(this, b)
 }
 
-class Atom<T>(val a : T) : BooleanExpr<T>()
+data class Atom<T>(val a : T) : BooleanExpr<T>() {
+	override fun toString() : String = a.toString()
+}
 
-class NotExpr<T>(val a : BooleanExpr<T>) : BooleanExpr<T>()
+data class NotExpr<T>(val a : BooleanExpr<T>) : BooleanExpr<T>(){
+	override fun toString() : String = "¬" + a
+}
 
-class AndExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>()
+data class AndExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>(){
+	override fun toString() : String = "(" + a + "\u2227" + b + ")"
+}
 
-class OrExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>()
+data class OrExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>(){
+	override fun toString() : String = "(" + a + "\u2228" + b + ")"
+}
 
 // == Transform to CNF ==
 
-typealias Disjunction<T> = ArrayList<BooleanExpr<T>>
+typealias Disjunction<T> = HashSet<BooleanExpr<T>>
 
-typealias Conjunction<T> = ArrayList<Disjunction<T>>
+typealias Conjunction<T> = HashSet<Disjunction<T>>
 
 fun BooleanExpr<*>.isLiteral() =
 		when (this) {
@@ -105,16 +105,3 @@ fun <T> BooleanExpr<T>.toCNF() : Conjunction<T> {
 fun <T> Conjunction<T>.prettyPrint() : String =
 		this.joinToString(", ", "[", "]",
 				transform = { c -> c.joinToString(", ", "[", "]") })
-
-fun main(args : Array<String>) {
-	val a = Atom("a")
-	val b = Atom("b")
-	val c = Atom("c")
-	val d = Atom("d")
-//	val expr = -(-a and b) or -(c and -d)
-//	val expr = -(c and -d)
-	val expr = (c or (a and b))
-	println(expr)
-	println()
-	println(expr.toCNF().prettyPrint())
-}

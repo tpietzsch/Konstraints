@@ -11,10 +11,23 @@ primary        → IDENTIFIER
                | "(" expression ")" ;
 */
 
-fun parse( tokens : List<Token> ) : BooleanExpr<String> = Parser(tokens).expression()
+fun parse( tokens : List<Token> ) : BooleanExpr<String> = Parser(tokens).parse()
+
+private class ParseError : RuntimeException()
 
 private class Parser(private val tokens : List<Token>) {
 	private var current = 0
+
+	fun parse() : BooleanExpr<String> {
+		try {
+			val expr = binary();
+			if ( !isAtEnd() )
+				throw parseError(peek(), "Unexpected token after end of expression.")
+			return expr
+		} catch (e : ParseError) {
+			return Atom("ERROR")
+		}
+	}
 
 	fun expression() : BooleanExpr<String> {
 		return binary()
@@ -38,7 +51,6 @@ private class Parser(private val tokens : List<Token>) {
 
 	private fun unary() : BooleanExpr<String> {
 		if (match(BANG)) {
-			val operator = previous()
 			val right = unary()
 			return NotExpr(right)
 		} else
@@ -56,7 +68,7 @@ private class Parser(private val tokens : List<Token>) {
 			return expr
 		}
 
-		return Atom("TODO")
+		throw parseError(peek(), "Expected identifier or '('.")
 	}
 
 	private fun consume(type : TokenType, message : String) : Token {
@@ -69,8 +81,6 @@ private class Parser(private val tokens : List<Token>) {
 		error(token, message)
 		return ParseError()
 	}
-
-	private class ParseError : RuntimeException()
 
 	private fun match(vararg types : TokenType) : Boolean {
 		for (type in types) {
