@@ -6,12 +6,11 @@ enum class TokenType {
 	// Single-character tokens.
 	LEFT_PAREN,
 	RIGHT_PAREN,
-	BANG, AND, OR,
-//	EQUAL,
+	NOT, AND, OR,
 
-//	// One or two character tokens.
-//	MINUS,
-//	MINUS_GREATER,
+	// Two-character tokens.
+	EQUIVALENT,
+	IMPLIES,
 
 	// Literals.
 	IDENTIFIER,
@@ -48,16 +47,31 @@ private class Scanner(val source : String) {
 		when (c) {
 			'(' -> addToken(LEFT_PAREN)
 			')' -> addToken(RIGHT_PAREN)
-			'!' -> addToken(BANG)
+			'!' -> addToken(NOT)
 			'&' -> addToken(AND)
 			'|' -> addToken(OR)
+
 			' ', '\r', '\t' -> {
+			}
+
+			'-' -> {
+				if (match('>'))
+					addToken(IMPLIES)
+				else
+					error((current - 1), "Unexpected character.")
+			}
+
+			'=' -> {
+				if (match('='))
+					addToken(EQUIVALENT)
+				else
+					error((current - 1), "Unexpected character.")
 			}
 
 			else -> {
 				when {
 					isAlpha(c) -> identifier()
-					else -> error( (current-1), "Unexpected character.")
+					else -> error((current - 1), "Unexpected character.")
 				}
 			}
 		}
@@ -68,6 +82,14 @@ private class Scanner(val source : String) {
 	private fun isAtEnd() : Boolean = current >= source.length
 
 	private fun peek() = if (isAtEnd()) '\u0000' else source[current]
+
+	private fun match(expected : Char) : Boolean {
+		if (isAtEnd()) return false
+		if (source[current] != expected) return false
+
+		current++
+		return true
+	}
 
 	private fun addToken(type : TokenType) {
 		val text = source.substring(start, current)

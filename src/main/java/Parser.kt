@@ -3,7 +3,8 @@ import TokenType.*
 /*
 Grammar:
 
-expression     → binary ;
+expression     → implication ;
+implication    → binary ( ( "->" | "==" ) binary )* ;
 binary         → unary ( ( "&" | "|" ) unary )* ;
 unary          → "!" unary ;
                | primary ;
@@ -20,7 +21,7 @@ private class Parser(private val tokens : List<Token>) {
 
 	fun parse() : BooleanExpr<String> {
 		try {
-			val expr = binary();
+			val expr = expression();
 			if ( !isAtEnd() )
 				throw parseError(peek(), "Unexpected token after end of expression.")
 			return expr
@@ -30,7 +31,23 @@ private class Parser(private val tokens : List<Token>) {
 	}
 
 	fun expression() : BooleanExpr<String> {
-		return binary()
+		return implication()
+	}
+
+	private fun implication() : BooleanExpr<String> {
+		var expr = binary()
+
+		while (match(IMPLIES, EQUIVALENT)) {
+			val operator = previous()
+			val right = binary()
+			expr = when (operator.type) {
+				IMPLIES -> ImplExpr(expr, right)
+				EQUIVALENT -> EquExpr(expr, right)
+				else -> throw IllegalStateException()
+			}
+		}
+
+		return expr
 	}
 
 	private fun binary() : BooleanExpr<String> {
@@ -50,7 +67,7 @@ private class Parser(private val tokens : List<Token>) {
 	}
 
 	private fun unary() : BooleanExpr<String> {
-		if (match(BANG)) {
+		if (match(NOT)) {
 			val right = unary()
 			return NotExpr(right)
 		} else

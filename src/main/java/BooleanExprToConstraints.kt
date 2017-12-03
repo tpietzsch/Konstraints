@@ -24,18 +24,23 @@ private fun run(source : String) {
 
 	println(expr.toString())
 	println(cnf.prettyPrint())
+	println(removeRedundant(cnf).prettyPrint())
 	println(cnfConstraints(cnf))
 }
 
-// TODO: remove clauses that are supersets of other clauses
+fun <T> removeRedundant(cnf : Conjunction<T>) = Conjunction(
+		cnf.filter { clause ->
+			cnf.filterNot { it == clause }
+					.none { clause.containsAll(it) }
+		})
 
 fun <T> cnfConstraints(cnf : Conjunction<T>) = cnf.map { clauseConstraints(it) }.joinToString("\n")
 
 fun <T> clauseConstraints(clause : Disjunction<T>) : String {
 	val (positive, negative) = clause.partition { it is Atom }
-	val s1 = positive.joinToString(" + " );
-	val s2 = negative.joinToString(" - ", transform = {e -> (e as NotExpr<T>).a.toString() } )
-	return s1 + (if ( negative.isEmpty() ) "" else " - " + s2 ) + " ≥ ${1 - negative.size}"
+	val s1 = positive.joinToString(" + ");
+	val s2 = negative.joinToString(" - ", transform = { e -> (e as NotExpr<T>).a.toString() })
+	return s1 + (if (negative.isEmpty()) "" else " - " + s2) + " ≥ ${1 - negative.size}"
 }
 
 var thesource : String = ""

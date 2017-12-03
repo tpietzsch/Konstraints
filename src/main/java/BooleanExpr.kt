@@ -6,6 +6,10 @@ sealed class BooleanExpr<T>() {
 	infix fun and(b : BooleanExpr<T>) = AndExpr<T>(this, b)
 
 	infix fun or(b : BooleanExpr<T>) = OrExpr<T>(this, b)
+
+	infix fun impl(b : BooleanExpr<T>) = ImplExpr<T>(this, b)
+
+	infix fun equ(b : BooleanExpr<T>) = EquExpr<T>(this, b)
 }
 
 data class Atom<T>(val a : T) : BooleanExpr<T>() {
@@ -22,6 +26,14 @@ data class AndExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanE
 
 data class OrExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>(){
 	override fun toString() : String = "(" + a + "\u2228" + b + ")"
+}
+
+data class ImplExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>(){
+	override fun toString() : String = "(" + a + "\u27f6" + b + ")"
+}
+
+data class EquExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>(){
+	override fun toString() : String = "(" + a + "\u27f7" + b + ")"
 }
 
 // == Transform to CNF ==
@@ -94,6 +106,14 @@ fun <T> BooleanExpr<T>.toCNF() : Conjunction<T> {
 			is OrExpr -> {
 				disj.add(expr.a)
 				disj.add(expr.b)
+				conj.add(disj)
+			}
+			is ImplExpr -> {
+				disj.add(-expr.a or expr.b)
+				conj.add(disj)
+			}
+			is EquExpr -> {
+				disj.add((expr.a impl expr.b) and (expr.b impl expr.a))
 				conj.add(disj)
 			}
 		}
