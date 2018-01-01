@@ -15,8 +15,16 @@ enum class TokenType {
 	// Literals.
 	IDENTIFIER,
 
+	// Keywords.
+	ONE, ALL, IN,
+
 	EOF
 }
+private val keywords = mapOf(
+		"one" to ONE,
+		"all" to ALL,
+		"of" to IN,
+		"in" to IN)
 
 data class Token(val type : TokenType, val lexeme : String, val from : Int, val to : Int) {
 	override fun toString() : String = String() + type + " " + lexeme
@@ -98,7 +106,11 @@ private class Scanner(val source : String) {
 
 	private fun identifier() {
 		while (isAlphaNumeric(peek())) advance()
-		addToken(IDENTIFIER)
+
+		val text = source.substring(start, current)
+		var type: TokenType? = keywords.get(text)
+		if (type == null) type = IDENTIFIER
+		addToken(type)
 	}
 
 	private fun isDigit(c : Char) : Boolean = c in '0' .. '9'

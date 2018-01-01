@@ -21,19 +21,35 @@ data class NotExpr<T>(val a : BooleanExpr<T>) : BooleanExpr<T>(){
 }
 
 data class AndExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>(){
-	override fun toString() : String = "(" + a + "\u2227" + b + ")"
+	override fun toString() : String = "(" + a + " \u2227 " + b + ")"
 }
 
 data class OrExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>(){
-	override fun toString() : String = "(" + a + "\u2228" + b + ")"
+	override fun toString() : String = "(" + a + " \u2228 " + b + ")"
 }
 
 data class ImplExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>(){
-	override fun toString() : String = "(" + a + "\u27f6" + b + ")"
+	override fun toString() : String = "(" + a + " \u27f6 " + b + ")"
 }
 
 data class EquExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanExpr<T>(){
-	override fun toString() : String = "(" + a + "\u27f7" + b + ")"
+	override fun toString() : String = "(" + a + " \u27f7 " + b + ")"
+}
+
+// == generalized conjunction and disjunction of atoms ==
+
+data class GenDisj<T>(val a : T, val setOfA : T) : BooleanExpr<T>() {
+	override fun toString() : String = "{\u22c1" + a.toString() + " in " + setOfA.toString() + "}"
+}
+
+data class GenConj<T>(val a : T, val setOfA : T) : BooleanExpr<T>() {
+	override fun toString() : String = "{\u22c0" + a.toString() + " in " + setOfA.toString() + "}"
+}
+
+fun main(args : Array<String>) {
+	val expr = -(GenDisj("a", "A") or GenConj("b", "B"))
+	println(expr)
+	println(expr.toCNF().prettyPrint())
 }
 
 // == Transform to CNF ==
@@ -42,11 +58,18 @@ typealias Disjunction<T> = HashSet<BooleanExpr<T>>
 
 typealias Conjunction<T> = HashSet<Disjunction<T>>
 
-fun BooleanExpr<*>.isLiteral() =
+fun BooleanExpr<*>.isGenAtom() =
 		when (this) {
 			is Atom -> true
-			is NotExpr -> this.a is Atom
+			is GenDisj -> true
+			is GenConj -> true
 			else -> false
+		}
+
+fun BooleanExpr<*>.isLiteral() =
+		when (this) {
+			is NotExpr -> this.a.isGenAtom()
+			else -> this.isGenAtom()
 		}
 
 fun <T> Disjunction<T>.isClause() : Boolean = this.all { it.isLiteral() }
@@ -72,10 +95,14 @@ fun <T> BooleanExpr<T>.toCNF() : Conjunction<T> {
 		var expr : BooleanExpr<T> = disj.popNonLiteral()!!;
 		when (expr) {
 			is Atom -> throw IllegalStateException() // cannot happen, expr would be a literal
+			is GenDisj -> throw IllegalStateException() // cannot happen, expr would be a literal
+			is GenConj -> throw IllegalStateException() // cannot happen, expr would be a literal
 			is NotExpr -> {
 				val a = expr.a;
 				when (a) {
 					is Atom -> throw IllegalStateException() // cannot happen, expr would be a literal
+					is GenDisj -> throw IllegalStateException() // cannot happen, expr would be a literal
+					is GenConj -> throw IllegalStateException() // cannot happen, expr would be a literal
 					is NotExpr -> { // double negation
 						disj.add(a.a)
 						conj.add(disj)

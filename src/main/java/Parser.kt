@@ -1,4 +1,5 @@
 import TokenType.*
+import org.yaml.snakeyaml.events.Event
 
 /*
 Grammar:
@@ -9,6 +10,7 @@ binary         → unary ( ( "&" | "|" ) unary )* ;
 unary          → "!" unary ;
                | primary ;
 primary        → IDENTIFIER
+			   | ( "one" | "all" ) IDENTIFIER "in" IDENTIFIER
                | "(" expression ")" ;
 */
 
@@ -85,7 +87,21 @@ private class Parser(private val tokens : List<Token>) {
 			return expr
 		}
 
-		throw parseError(peek(), "Expected identifier or '('.")
+		if (match(ONE)) {
+			val a = consume(IDENTIFIER, "Expected identifier.")
+			consume(IN, "Expected 'in'.")
+			val setOfA = consume(IDENTIFIER, "Expected identifier.")
+			return GenDisj(a.lexeme, setOfA.lexeme)
+		}
+
+		if (match(ALL)) {
+			val a = consume(IDENTIFIER, "Expected identifier.")
+			consume(IN, "Expected 'in'.")
+			val setOfA = consume(IDENTIFIER, "Expected identifier.")
+			return GenConj(a.lexeme, setOfA.lexeme)
+		}
+
+		throw parseError(peek(), "Expected identifier, 'one', 'all', or '('.")
 	}
 
 	private fun consume(type : TokenType, message : String) : Token {
