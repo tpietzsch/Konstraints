@@ -52,12 +52,26 @@ fun main(args : Array<String>) {
 	println(expr.toCNF().prettyPrint())
 }
 
+// == Disjunction and Conjunction sets ==
+
+class Disjunction<T> : HashSet<BooleanExpr<T>> {
+	constructor(collection : Collection<out BooleanExpr<T>>) : super(collection)
+	constructor(element : BooleanExpr<T>) : super(listOf(element))
+}
+
+class Conjunction<T> : HashSet<Disjunction<T>> {
+	constructor(collection : Collection<out Disjunction<T>>) : super(collection)
+	constructor(element : Disjunction<T>) : super(listOf(element))
+}
+
 // == Transform to CNF ==
 
-typealias Disjunction<T> = HashSet<BooleanExpr<T>>
-
-typealias Conjunction<T> = HashSet<Disjunction<T>>
-
+/**
+ * Returns `true` iff expression is
+ * - an atom,
+ * - a set disjunction,
+ * - or a set conjunction.
+ */
 fun BooleanExpr<*>.isGenAtom() =
 		when (this) {
 			is Atom -> true
@@ -66,28 +80,45 @@ fun BooleanExpr<*>.isGenAtom() =
 			else -> false
 		}
 
+/**
+ * Returns `true` iff expression is a [generalized atom][isGenAtom] or a negated [generalized atom][isGenAtom].
+ */
 fun BooleanExpr<*>.isLiteral() =
 		when (this) {
 			is NotExpr -> this.a.isGenAtom()
 			else -> this.isGenAtom()
 		}
 
+/**
+ * Returns `true` iff disjunction is a clause, i.e., contains only literals.
+ */
 fun <T> Disjunction<T>.isClause() : Boolean = this.all { it.isLiteral() }
 
+/**
+ * Removes and returns an element of a disjunction that is not a literal.
+ * Returns `null` if the disjunction contains no non-literal.
+ */
 fun <T> Disjunction<T>.popNonLiteral() : BooleanExpr<T>? {
 	val expr = this.find { !it.isLiteral() }
 	if (expr != null) this.remove(expr)
 	return expr;
 }
 
+/**
+ * Removes and returns an element of a conjunction that is not a clause.
+ * Returns `null` if the conjunction contains no non-clause.
+ */
 fun <T> Conjunction<T>.popNonClause() : Disjunction<T>? {
 	val disj = this.find { !it.isClause() }
 	if (disj != null) this.remove(disj)
 	return disj
 }
 
+/**
+ * Returns the conjunctive normal form (conjunction of clauses) of expression.
+ */
 fun <T> BooleanExpr<T>.toCNF() : Conjunction<T> {
-	val conj = Conjunction(listOf(Disjunction(listOf(this))))
+	val conj = Conjunction(Disjunction(this))
 	while (true) {
 		var disj = conj.popNonClause()
 		if (disj == null)
