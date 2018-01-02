@@ -32,15 +32,7 @@ private fun run(source : String) {
 
 // === printing ===
 
-data class ElementAndSet<T>(val a : T, val setOfA : T )
-
-data class LHS<T>( val posVar : MutableList<T> = ArrayList(), val negVar : MutableList<T> = ArrayList(), val posSet : MutableList<ElementAndSet<T>> = ArrayList(), val negSet : MutableList<ElementAndSet<T>> = ArrayList())
-
-data class RHS<T>( var const : Int = 1, val negSet : MutableList<ElementAndSet<T>> = ArrayList() )
-
-data class ConstraintLine<T>( val allQuant : MutableList<ElementAndSet<T>> = ArrayList(), val lhs : LHS<T> = LHS(), val rhs : RHS<T> = RHS() )
-
-fun <T> ConstraintLine<T>.toText() : String
+fun <T> ClauseConstraint<T>.toText() : String
 {
 	val squant = allQuant.joinToString( " ") { eas -> "(∀ ${eas.a} ∈ ${eas.setOfA})" }
 
@@ -70,7 +62,7 @@ fun <T> ConstraintLine<T>.toText() : String
 }
 
 fun printit(cnf : Conjunction<String>) {
-	println(cnfConstraintLines(cnf))
+	println(constraintLines(cnf))
 }
 
 fun BooleanExpr<*>.isGenLiteral() =
@@ -81,63 +73,11 @@ fun BooleanExpr<*>.isGenLiteral() =
 			else -> false
 		}
 
-fun <T> cnfConstraintLines(cnf : Conjunction<T>) = cnf.map { clauseConstraintLines(it) }.joinToString("\n")
+fun <T> constraintLines(cnf : Conjunction<T>) = cnf.map { constraintLines(it) }.joinToString("\n")
 
-fun <T> clauseConstraintLines(clause : Disjunction<T>) : String {
-	val posVar = mutableListOf<Atom<T>>()
-	val negVar = mutableListOf<Atom<T>>()
-	val posDisj = mutableListOf<GenDisj<T>>()
-	val negDisj = mutableListOf<GenDisj<T>>()
-	val posConj = mutableListOf<GenConj<T>>()
-	val negConj = mutableListOf<GenConj<T>>()
-	clause.forEach {
-		when (it) {
-			is NotExpr -> {
-				when (it.a) {
-					is GenDisj -> negDisj.add(it.a)
-					is GenConj -> negConj.add(it.a)
-					else -> negVar.add(it.a as Atom<T>)
-				}
-			}
-			is GenDisj -> posDisj.add(it)
-			is GenConj -> posConj.add(it)
-			is Atom -> posVar.add(it)
-		}
-	}
-
-	val line = ConstraintLine<T>()
-	posVar.forEach { line.lhs.posVar.add( it.a ) }
-	negVar.forEach {
-		line.lhs.negVar.add( it.a )
-		line.rhs.const -= 1
-	}
-	posDisj.forEach { line.lhs.posSet.add(ElementAndSet(it.a, it.setOfA)) }
-	negDisj.forEach {
-		line.allQuant.add(ElementAndSet(it.a, it.setOfA))
-		line.lhs.negVar.add(it.a)
-		line.rhs.const -= 1
-	}
-	posConj.forEach {
-		line.allQuant.add(ElementAndSet(it.a, it.setOfA))
-		line.lhs.posVar.add(it.a)
-	}
-	negConj.forEach {
-		line.lhs.negSet.add(ElementAndSet(it.a, it.setOfA))
-		line.rhs.negSet.add(ElementAndSet(it.a, it.setOfA))
-	}
-
-	return line.toText();
-	// TODO... return line, translate to text elsewhere
-}
-
+fun <T> constraintLines(clause : Disjunction<T>) = clause.toConstraint().toText()
 
 // =================
-
-fun <T> removeRedundant(cnf : Conjunction<T>) = Conjunction(
-		cnf.filter { clause ->
-			cnf.filterNot { it == clause }
-					.none { clause.containsAll(it) }
-		})
 
 fun <T> cnfConstraints(cnf : Conjunction<T>) = cnf.map { clauseConstraints(it) }.joinToString("\n")
 
