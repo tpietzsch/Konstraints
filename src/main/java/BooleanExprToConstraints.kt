@@ -6,6 +6,7 @@ import org.apache.commons.cli.ParseException
 fun main(args : Array<String>) {
 	val options = Options()
 	options.addOption("t", "tex", false, "latex output")
+	options.addOption("i", "interactive", false, "interactive")
 	options.addOption("h", "help", false, "show help")
 
 	fun printHelp() {
@@ -46,12 +47,13 @@ expression examples:
 	try {
 		val line = parser.parse(options, args)
 
-		if (line.hasOption("h")) printHelp()
 
 		val tex = line.hasOption("t")
 		val source = line.args.joinToString(" ")
-		val interactive = true;//source.isBlank()
+		val interactive = line.hasOption("i")
+		val help = line.hasOption("h") || (source.isBlank() && !interactive)
 
+		if (help) printHelp()
 		run(source, interactive, tex)
 	} catch (exp : ParseException) {
 		System.err.println("Parsing failed.  Reason: " + exp.message)
@@ -84,7 +86,7 @@ private fun run(source : String, tex : Boolean = false) {
 
 		if (tex) {
 			println("Input:\n\\[\n  ${expr.toLatex()}\n\\]")
-			println("CNF:\n\\[\n  ${cnf.toLatex()}\n\\]" )
+			println("CNF:\n\\[\n  ${cnf.toLatex()}\n\\]")
 			println("Constraints:\n\\[\n  \\begin{array}{rrcl}")
 			constraints.forEach { println("    " + it.toLatex() + "\\\\") }
 			println("  \\end{array}\n\\]")
@@ -153,7 +155,7 @@ private fun <T> ClauseConstraint<T>.toLatex() : String {
 }
 
 // extension functions CANNOT be polymorphic (statically resolved)
-private fun <T> BooleanExpr<T>.toLatex() : String = when(this) {
+private fun <T> BooleanExpr<T>.toLatex() : String = when (this) {
 	is Atom -> this.toLatex()
 	is NotExpr -> this.toLatex()
 	is AndExpr -> this.toLatex()
@@ -164,6 +166,7 @@ private fun <T> BooleanExpr<T>.toLatex() : String = when(this) {
 	is GenConj -> this.toLatex()
 	else -> ""
 }
+
 private fun <T> Atom<T>.toLatex() = toString()
 private fun <T> NotExpr<T>.toLatex() = "\\neg ${a.toLatex()}"
 private fun <T> AndExpr<T>.toLatex() = "\\left( ${a.toLatex()} \\land ${b.toLatex()} \\right)"
@@ -174,8 +177,8 @@ private fun <T> GenDisj<T>.toLatex() = "\\left( \\bigvee_{${a} \\in ${setOfA}} $
 private fun <T> GenConj<T>.toLatex() = "\\left( \\bigwedge_{${a} \\in ${setOfA}} ${a} \\right)"
 
 private fun <T> Conjunction<T>.toLatex() : String =
-		this.joinToString(", ", "\\left[", "\\right]" ) {
-			clause -> clause.joinToString(", ", "\\left[", "\\right]") {
-				expr -> expr.toLatex()
+		this.joinToString(", ", "\\left[", "\\right]") { clause ->
+			clause.joinToString(", ", "\\left[", "\\right]") { expr ->
+				expr.toLatex()
 			}
 		}
