@@ -1,5 +1,4 @@
 import TokenType.*
-import org.yaml.snakeyaml.events.Event
 
 /*
 Grammar:
@@ -14,22 +13,22 @@ primary        → IDENTIFIER
                | "(" expression ")" ;
 */
 
-fun parse( tokens : List<Token> ) : BooleanExpr<String> = Parser(tokens).parse()
+fun parse(source : String) : BooleanExpr<String> {
+	val parseErrors = ParseErrors(source)
+	val tokens = scan(source, parseErrors)
+	if (parseErrors.hadError)
+		throw ParseError()
+	return Parser(tokens, parseErrors).parse()
+}
 
-private class ParseError : RuntimeException()
-
-private class Parser(private val tokens : List<Token>) {
+private class Parser(private val tokens : List<Token>, private val parseErrors : ParseErrors) {
 	private var current = 0
 
 	fun parse() : BooleanExpr<String> {
-		try {
-			val expr = expression();
-			if ( !isAtEnd() )
-				throw parseError(peek(), "Unexpected token after end of expression.")
-			return expr
-		} catch (e : ParseError) {
-			return Atom("ERROR")
-		}
+		val expr = expression();
+		if (!isAtEnd())
+			throw parseErrors.error(peek(), "Unexpected token after end of expression.")
+		return expr
 	}
 
 	fun expression() : BooleanExpr<String> {
@@ -101,18 +100,13 @@ private class Parser(private val tokens : List<Token>) {
 			return GenConj(a.lexeme, setOfA.lexeme)
 		}
 
-		throw parseError(peek(), "Expected identifier, 'one', 'all', or '('.")
+		throw parseErrors.error(peek(), "Expected identifier, 'one', 'all', or '('.")
 	}
 
 	private fun consume(type : TokenType, message : String) : Token {
 		if (check(type)) return advance()
 
-		throw parseError(peek(), message)
-	}
-
-	private fun parseError(token : Token, message : String) : ParseError {
-		error(token, message)
-		return ParseError()
+		throw parseErrors.error(peek(), message)
 	}
 
 	private fun match(vararg types : TokenType) : Boolean {

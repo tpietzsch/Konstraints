@@ -1,11 +1,10 @@
-
 // == Disjunction and Conjunction sets ==
 
 /**
  * A disjunction of boolean expressions (possibly a clause, if all expressions are literals).
  */
 class Disjunction<T> : HashSet<BooleanExpr<T>> {
-	constructor(collection : Collection<out BooleanExpr<T>>) : super(collection)
+	constructor(collection : Collection<BooleanExpr<T>>) : super(collection)
 	constructor(element : BooleanExpr<T>) : super(listOf(element))
 }
 
@@ -13,7 +12,7 @@ class Disjunction<T> : HashSet<BooleanExpr<T>> {
  * A conjunction of disjunctions of boolean expressions (possibly a CNF, if all disjunctions are clauses).
  */
 class Conjunction<T> : HashSet<Disjunction<T>> {
-	constructor(collection : Collection<out Disjunction<T>>) : super(collection)
+	constructor(collection : Collection<Disjunction<T>>) : super(collection)
 	constructor(element : Disjunction<T>) : super(listOf(element))
 }
 
@@ -113,6 +112,15 @@ fun <T> BooleanExpr<T>.toCNF() : Conjunction<T> {
 						d2.add(-a.b)
 						conj.add(d1)
 						conj.add(d2)
+					}
+					is ImplExpr -> {
+						disj.add(a.a and -a.b)
+						conj.add(disj)
+					}
+					is EquExpr -> {
+						disj.add(a.a and a.b)
+						disj.add(-a.a and -a.b)
+						conj.add(disj)
 					}
 				}
 			}

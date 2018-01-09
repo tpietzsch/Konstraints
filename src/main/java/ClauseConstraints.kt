@@ -56,19 +56,22 @@ data class ClauseConstraint<T>(
 		 */
 		val rhs : RHS<T> = RHS())
 
-// == TODO ==
+/**
+ * Transform a CNF into a set of contraints
+ */
+fun <T> constraints(cnf : Conjunction<T>) : List<ClauseConstraint<T>> = cnf.map { it -> constraint(it) }
 
 /**
- *
+ * Transform a clause into a contraint
  */
-fun <T> Disjunction<T>.toConstraint() : ClauseConstraint<T> {
+fun <T> constraint(clause : Disjunction<T>) : ClauseConstraint<T> {
 	val posVar = mutableListOf<Atom<T>>()
 	val negVar = mutableListOf<Atom<T>>()
 	val posDisj = mutableListOf<GenDisj<T>>()
 	val negDisj = mutableListOf<GenDisj<T>>()
 	val posConj = mutableListOf<GenConj<T>>()
 	val negConj = mutableListOf<GenConj<T>>()
-	this.forEach {
+	clause.forEach {
 		when (it) {
 			is NotExpr -> {
 				when (it.a) {
@@ -80,6 +83,7 @@ fun <T> Disjunction<T>.toConstraint() : ClauseConstraint<T> {
 			is GenDisj -> posDisj.add(it)
 			is GenConj -> posConj.add(it)
 			is Atom -> posVar.add(it)
+			else -> throw IllegalStateException("not a clause")
 		}
 	}
 

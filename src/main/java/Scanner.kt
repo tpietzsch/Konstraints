@@ -20,8 +20,10 @@ enum class TokenType {
 
 	EOF
 }
+
 private val keywords = mapOf(
 		"one" to ONE,
+		"any" to ONE,
 		"all" to ALL,
 		"of" to IN,
 		"in" to IN)
@@ -30,9 +32,9 @@ data class Token(val type : TokenType, val lexeme : String, val from : Int, val 
 	override fun toString() : String = String() + type + " " + lexeme
 }
 
-fun scan(source : String) : List<Token> = Scanner(source).scanTokens()
+fun scan(source : String, parseErrors : ParseErrors) : List<Token> = Scanner(source, parseErrors).scanTokens()
 
-private class Scanner(val source : String) {
+private class Scanner(private val source : String, private val parseErrors : ParseErrors) {
 	private val tokens = ArrayList<Token>()
 	private var start = 0
 	private var current = 0
@@ -66,20 +68,20 @@ private class Scanner(val source : String) {
 				if (match('>'))
 					addToken(IMPLIES)
 				else
-					error((current - 1), "Unexpected character.")
+					parseErrors.error((current - 1), "Unexpected character.")
 			}
 
 			'=' -> {
 				if (match('='))
 					addToken(EQUIVALENT)
 				else
-					error((current - 1), "Unexpected character.")
+					parseErrors.error((current - 1), "Unexpected character.")
 			}
 
 			else -> {
 				when {
 					isAlpha(c) -> identifier()
-					else -> error((current - 1), "Unexpected character.")
+					else -> parseErrors.error((current - 1), "Unexpected character.")
 				}
 			}
 		}
