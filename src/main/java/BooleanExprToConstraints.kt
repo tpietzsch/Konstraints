@@ -5,7 +5,6 @@ import org.apache.commons.cli.ParseException
 
 fun main(args : Array<String>) {
 	val options = Options()
-	options.addOption("t", "tex", false, "latex output")
 	options.addOption("i", "interactive", false, "interactive")
 	options.addOption("h", "help", false, "show help")
 
@@ -19,9 +18,6 @@ operators:
   "->"   implication
   "=="   equivalency
 
-reserved names:
-  "one", "any", "all", "of", "in"
-
 grammar:
   expression     → implication ;
   implication    → binary ( ( "->" | "==" ) binary )* ;
@@ -29,7 +25,6 @@ grammar:
   unary          → "!" unary ;
                  | primary ;
   primary        → IDENTIFIER
-                 | ( "one" | "all" ) IDENTIFIER "in" IDENTIFIER
                  | "(" expression ")" ;
 
 expression examples:
@@ -37,9 +32,6 @@ expression examples:
   (a | b) & !(a | c)
   (a & b) -> c
   (a & b) == c
-  (any x in X) -> (a | b)
-  (all x in X) == c
-
 """)
 	}
 
@@ -47,30 +39,28 @@ expression examples:
 	try {
 		val line = parser.parse(options, args)
 
-
-		val tex = line.hasOption("t")
 		val source = line.args.joinToString(" ")
 		val interactive = line.hasOption("i")
 		val help = line.hasOption("h") || (source.isBlank() && !interactive)
-
 		if (help) printHelp()
-		run(source, interactive, tex)
+
+		run(source, interactive)
 	} catch (exp : ParseException) {
 		System.err.println("Parsing failed.  Reason: " + exp.message)
 		return;
 	}
 }
 
-fun run(source : String, interactive : Boolean, tex : Boolean) {
-	run(source, tex)
+fun run(source : String, interactive : Boolean) {
+	run(source)
 	if (interactive)
 		while (true) {
 			print("> ")
-			run(readLine()!!, tex)
+			run(readLine()!!)
 		}
 }
 
-private fun run(source : String, tex : Boolean = false) {
+private fun run(source : String) {
 	if (source.isBlank())
 		return
 	try {
@@ -83,15 +73,6 @@ private fun run(source : String, tex : Boolean = false) {
 		println("Constraints")
 		constraints.forEach { println("    " + it.toText()) }
 		println()
-
-		if (tex) {
-			println("Input:\n\\[\n  ${expr.toLatex()}\n\\]")
-			println("CNF:\n\\[\n  ${cnf.toLatex()}\n\\]")
-			println("Constraints:\n\\[\n  \\begin{array}{rrcl}")
-			constraints.forEach { println("    " + it.toLatex() + "\\\\") }
-			println("  \\end{array}\n\\]")
-			println()
-		}
 	} catch (e : ParseError) {
 	}
 }
@@ -99,86 +80,7 @@ private fun run(source : String, tex : Boolean = false) {
 // === printing ===
 
 private fun <T> ClauseConstraint<T>.toText() : String {
-	val squant = allQuant.joinToString(" ") { eas -> "(∀ ${eas.a} ∈ ${eas.setOfA})" }
-
-	// LHS
 	val pv = lhs.posVar.joinToString(" + ");
 	val nv = lhs.negVar.joinToString(" - ");
-	val ps = lhs.posSet.joinToString(" + ") { eas -> "(∑ ${eas.a} ∈ ${eas.setOfA})" }
-	val ns = lhs.negSet.joinToString(" - ") { eas -> "(∑ ${eas.a} ∈ ${eas.setOfA})" }
-
-	val p = pv + (if (lhs.posSet.isEmpty() || lhs.posVar.isEmpty()) "" else " + ") + ps;
-	val n = nv + (if (lhs.negSet.isEmpty() || lhs.negVar.isEmpty()) "" else " - ") + ns;
-	val slhs = p + (if (n.isEmpty()) "" else " - ") + n;
-
-	// RHS
-	val nc = rhs.negSet.joinToString(" - ") { eas -> "‖${eas.setOfA}‖" }
-	val srhs =
-			if (rhs.const == 0) {
-				if (rhs.negSet.isEmpty())
-					"0"
-				else
-					" - " + nc;
-			} else {
-				rhs.const.toString() + (if (rhs.negSet.isEmpty()) "" else " - ") + nc;
-			}
-
-	return squant + (if (allQuant.isEmpty()) "" else " : ") + "${slhs} ≥ ${srhs}";
+	return "${pv}${if (nv.isEmpty()) "" else  " - "}${nv} ≥ ${rhs}";
 }
-
-private fun <T> ClauseConstraint<T>.toLatex() : String {
-	val squant = allQuant.joinToString(" ") { eas -> "\\left( \\forall ${eas.a} \\in ${eas.setOfA} \\right)" }
-
-	// LHS
-	val pv = lhs.posVar.joinToString(" + ");
-	val nv = lhs.negVar.joinToString(" - ");
-	val ps = lhs.posSet.joinToString(" + ") { eas -> "\\left( \\sum_{${eas.a} \\in ${eas.setOfA}} ${eas.a} \\right)" }
-	val ns = lhs.negSet.joinToString(" - ") { eas -> "\\left( \\sum_{${eas.a} \\in ${eas.setOfA}} ${eas.a} \\right)" }
-
-	val p = pv + (if (lhs.posSet.isEmpty() || lhs.posVar.isEmpty()) "" else " + ") + ps;
-	val n = nv + (if (lhs.negSet.isEmpty() || lhs.negVar.isEmpty()) "" else " - ") + ns;
-	val slhs = p + (if (n.isEmpty()) "" else " - ") + n;
-
-	// RHS
-	val nc = rhs.negSet.joinToString(" - ") { eas -> "\\left|${eas.setOfA}\\right|" }
-	val srhs =
-			if (rhs.const == 0) {
-				if (rhs.negSet.isEmpty())
-					"0"
-				else
-					" - " + nc;
-			} else {
-				rhs.const.toString() + (if (rhs.negSet.isEmpty()) "" else " - ") + nc;
-			}
-
-	return squant + (if (allQuant.isEmpty()) "& " else " :& ") + "${slhs} &\\ge & ${srhs}";
-}
-
-// extension functions CANNOT be polymorphic (statically resolved)
-private fun <T> BooleanExpr<T>.toLatex() : String = when (this) {
-	is Atom -> this.toLatex()
-	is NotExpr -> this.toLatex()
-	is AndExpr -> this.toLatex()
-	is OrExpr -> this.toLatex()
-	is ImplExpr -> this.toLatex()
-	is EquExpr -> this.toLatex()
-	is GenDisj -> this.toLatex()
-	is GenConj -> this.toLatex()
-	else -> ""
-}
-
-private fun <T> Atom<T>.toLatex() = toString()
-private fun <T> NotExpr<T>.toLatex() = "\\neg ${a.toLatex()}"
-private fun <T> AndExpr<T>.toLatex() = "\\left( ${a.toLatex()} \\land ${b.toLatex()} \\right)"
-private fun <T> OrExpr<T>.toLatex() = "\\left( ${a.toLatex()} \\lor ${b.toLatex()} \\right)"
-private fun <T> ImplExpr<T>.toLatex() = "\\left( ${a.toLatex()} \\longrightarrow ${b.toLatex()} \\right)"
-private fun <T> EquExpr<T>.toLatex() = "\\left( ${a.toLatex()} \\longleftrightarrow ${b.toLatex()} \\right)"
-private fun <T> GenDisj<T>.toLatex() = "\\left( \\bigvee_{${a} \\in ${setOfA}} ${a} \\right)"
-private fun <T> GenConj<T>.toLatex() = "\\left( \\bigwedge_{${a} \\in ${setOfA}} ${a} \\right)"
-
-private fun <T> Conjunction<T>.toLatex() : String =
-		this.joinToString(", ", "\\left[", "\\right]") { clause ->
-			clause.joinToString(", ", "\\left[", "\\right]") { expr ->
-				expr.toLatex()
-			}
-		}

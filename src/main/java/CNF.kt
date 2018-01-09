@@ -19,26 +19,13 @@ class Conjunction<T> : HashSet<Disjunction<T>> {
 // == Transform boolean expression to CNF ==
 
 /**
- * Returns `true` iff expression is
- * - an atom,
- * - a set disjunction,
- * - or a set conjunction.
- */
-fun BooleanExpr<*>.isGenAtom() =
-		when (this) {
-			is Atom -> true
-			is GenDisj -> true
-			is GenConj -> true
-			else -> false
-		}
-
-/**
- * Returns `true` iff expression is a [generalized atom][isGenAtom] or a negated [generalized atom][isGenAtom].
+ * Returns `true` iff expression is a atom or a negated atom.
  */
 fun BooleanExpr<*>.isLiteral() =
 		when (this) {
-			is NotExpr -> this.a.isGenAtom()
-			else -> this.isGenAtom()
+			is Atom -> true
+			is NotExpr -> this.a is Atom
+			else -> false
 		}
 
 /**
@@ -88,14 +75,10 @@ fun <T> BooleanExpr<T>.toCNF() : Conjunction<T> {
 		var expr : BooleanExpr<T> = disj.popNonLiteral()!!;
 		when (expr) {
 			is Atom -> throw IllegalStateException() // cannot happen, expr would be a literal
-			is GenDisj -> throw IllegalStateException() // cannot happen, expr would be a literal
-			is GenConj -> throw IllegalStateException() // cannot happen, expr would be a literal
 			is NotExpr -> {
 				val a = expr.a;
 				when (a) {
 					is Atom -> throw IllegalStateException() // cannot happen, expr would be a literal
-					is GenDisj -> throw IllegalStateException() // cannot happen, expr would be a literal
-					is GenConj -> throw IllegalStateException() // cannot happen, expr would be a literal
 					is NotExpr -> { // double negation
 						disj.add(a.a)
 						conj.add(disj)
@@ -150,6 +133,8 @@ fun <T> BooleanExpr<T>.toCNF() : Conjunction<T> {
 }
 
 // == Pretty-print CNF ==
+
+//fun <T> Conjunction<T>.prettyPrint() = joinToString(", ", "[", "]" ) { c -> c.joinToString(", ", "[", "]") }
 
 fun <T> Conjunction<T>.prettyPrint() : String =
 		this.joinToString(", ", "[", "]",

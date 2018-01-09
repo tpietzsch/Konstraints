@@ -15,18 +15,8 @@ enum class TokenType {
 	// Literals.
 	IDENTIFIER,
 
-	// Keywords.
-	ONE, ALL, IN,
-
 	EOF
 }
-
-private val keywords = mapOf(
-		"one" to ONE,
-		"any" to ONE,
-		"all" to ALL,
-		"of" to IN,
-		"in" to IN)
 
 data class Token(val type : TokenType, val lexeme : String, val from : Int, val to : Int) {
 	override fun toString() : String = String() + type + " " + lexeme
@@ -83,6 +73,7 @@ private class Scanner(private val source : String, private val parseErrors : Par
 					isAlpha(c) -> identifier()
 					else -> parseErrors.error((current - 1), "Unexpected character.")
 				}
+//				if (isAlpha(c)) identifier() else parseErrors.error((current - 1), "Unexpected character.")
 			}
 		}
 	}
@@ -108,11 +99,7 @@ private class Scanner(private val source : String, private val parseErrors : Par
 
 	private fun identifier() {
 		while (isAlphaNumeric(peek())) advance()
-
-		val text = source.substring(start, current)
-		var type: TokenType? = keywords.get(text)
-		if (type == null) type = IDENTIFIER
-		addToken(type)
+		addToken(IDENTIFIER)
 	}
 
 	private fun isDigit(c : Char) : Boolean = c in '0' .. '9'

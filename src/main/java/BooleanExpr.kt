@@ -36,20 +36,7 @@ data class EquExpr<T>(val a : BooleanExpr<T>, val b : BooleanExpr<T>) : BooleanE
 	override fun toString() : String = "(" + a + " \u27f7 " + b + ")"
 }
 
-// == generalized conjunction and disjunction of atoms ==
-
-data class GenDisj<T>(val a : T, val setOfA : T) : BooleanExpr<T>() {
-	override fun toString() : String = "{\u22c1" + a.toString() + " in " + setOfA.toString() + "}"
-}
-
-data class GenConj<T>(val a : T, val setOfA : T) : BooleanExpr<T>() {
-	override fun toString() : String = "{\u22c0" + a.toString() + " in " + setOfA.toString() + "}"
-}
-
-
-
-
 fun main(args : Array<String>) {
-	val expr = -(GenDisj("a", "A") or GenConj("b", "B"))
+	val expr = -Atom("a") and Atom("b") impl -Atom("c")
 	println(expr)
 }
