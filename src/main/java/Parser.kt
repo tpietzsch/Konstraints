@@ -9,7 +9,7 @@ binary         → unary ( ( "&" | "|" ) unary )* ;
 unary          → "!" unary ;
                | primary ;
 primary        → IDENTIFIER
-			   | ( "one" | "all" ) IDENTIFIER "in" IDENTIFIER
+			   | ( ONE | ALL ) IDENTIFIER IN IDENTIFIER
                | "(" expression ")" ;
 */
 
