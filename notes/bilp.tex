@@ -1,0 +1,108 @@
+\documentclass[a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{amssymb}
+\usepackage{mathtools}
+%\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{xspace}
+\usepackage[usenames,dvipsnames]{color}
+
+
+
+
+%%%% macros %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+\newcommand{\set}[1]{\ensuremath{\{#1\}}}
+
+% the set of integers (Z)
+\newcommand{\Int}{\ensuremath{\mathbb{Z}}}
+
+
+
+% abbreviations  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+\newcommand{\Ie}{I.e.{}}
+\newcommand{\Eg}{E.g.{}}
+\newcommand{\Cf}{Cf.{}}
+\newcommand{\ie}{i.e.{}}
+\newcommand{\eg}{e.g.{}}
+\newcommand{\cf}{cf.{}}
+\newcommand{\etc}{etc\xspace}
+\newcommand{\etal}{\emph{et~al.}}
+
+
+
+
+
+
+
+
+
+\begin{document}
+
+\title{Boolean Expressions to ILP Constraints}
+\author{Tobias Pietzsch}
+\maketitle
+
+$A$ is the set of atoms. $L=A \cup \set{\neg p \;|\; p \in A}$ is the set of literals. $C \subset L$ is a clause.
+For boolean expression $B$: Transform $B$ to CNF.
+For each clause $C \in B$, add a constraint
+$$
+\left(\sum_{p \in C \cap A} v_p \right) - \left( \sum_{\neg p \in C \setminus A} v_p \right) \;\ge\; 1 - \left\vert{C \setminus A}\right\vert
+$$
+
+
+\section{Intuition}
+Binary variable $p \equiv \top$ iff
+\begin{equation}
+	p \ge 1
+\end{equation}
+%
+Negated binary variable $\neg q \equiv \top$ iff
+\begin{equation}
+	(1-q) \ge 1
+\end{equation}
+%
+Disjunction of variables $p_1 \lor \dots \lor p_n  \equiv \top$ iff
+\begin{equation}
+	\sum_{1 \le i \le n} p_i \ge 1
+\end{equation}
+%
+Disjunction of negated variables $\neg q_1 \lor \dots \lor \neg q_m  \equiv \top$ iff
+\begin{align}
+	(1-q_1) + \dots + (1-q_m) &\ge 1 \\
+	m \cdot 1- \sum_{1 \le j \le m}q_j &\ge 1 \\
+	- \sum_{1 \le j \le m}q_j &\ge 1 - m
+\end{align}
+%
+Disjunction of literals $p_1 \lor \dots \lor p_n \lor \neg q_1 \lor \dots \lor \neg q_m  \equiv \top$ iff
+\begin{equation}
+	\sum_{1 \le i \le n} p_i - \sum_{1 \le j \le m}q_j \ge 1 - m
+\end{equation}
+%
+
+
+\section{Conjunction and Disjunction Literals over Sets of Atoms}
+Let $X$ be a set of atoms $x$. We allow the following "generalized literals" to occur in boolean expressions.
+\begin{align*}
+	\bigwedge_{x \in X} x\\
+	\bigvee_{x \in X} x\\
+	\neg\bigwedge_{x \in X} x\\
+	\neg\bigvee_{x \in X} x\\
+\end{align*}
+In constraints they translate as
+\begin{align*}
+	\bigvee_{x \in X} x &
+		\quad\quad\quad\leadsto & \ldots \; + \sum_{x \in X}x \; \ldots \; &\ge \; \ldots \\
+	\bigwedge_{x \in X} x &
+		\quad\quad\quad\leadsto & \forall x \in X \;:\; \ldots \; + x \; \ldots \; &\ge \; \ldots \\
+	\neg\bigwedge_{x \in X} x \equiv \bigvee_{x \in X} \neg x &
+		\quad\quad\quad\leadsto & \ldots \; - \sum_{x \in X}x \; \ldots \; &\ge \; \ldots \; - |X| \; \ldots \\
+	\neg\bigvee_{x \in X} x \equiv \bigwedge_{x \in X} \neg x &
+		\quad\quad\quad\leadsto & \forall x \in X \;:\; \ldots \; - x \; \ldots \; &\ge \; \ldots \; - 1 \; \ldots \\
+\end{align*}
+
+
+\end{document}
+
+% vim::set expandtab tabstop=4 softtabstop=2 shiftwidth=2 ft=tex:
